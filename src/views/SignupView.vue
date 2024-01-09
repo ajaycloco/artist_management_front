@@ -4,6 +4,7 @@ import {ref} from 'vue'
 import {emptyCheck, emailValidation, passwordValidation} from '../utils/validation.js'
 import {axiosPost} from '../utils/AxiosApi'
 import {URL} from '../utils/Constant'
+import FullWidthSpinner from '../components/FullWidthSpinner.vue'
 import axios from 'axios'
 
 const fullName = ref("")
@@ -42,6 +43,7 @@ const handleSignup=()=>{
 
     axiosPost(URL.signup,data,
     (resopnse)=>{
+       submitSpinner.value=false
     },
     (err)=>{
     })
@@ -56,6 +58,7 @@ const handleSignup=()=>{
 </script>
 
 <template>
+  <FullWidthSpinner v-if="submitSpinner" />
     <div class="row" v-if="error && errorMessages.length>0">
         
         <div class="col-lg-12 d-flex justify-content-center">
