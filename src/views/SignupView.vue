@@ -19,7 +19,8 @@ const handleSignup=()=>{
    let data={
         full_name:fullName.value,
         email:email.value,
-        password:password.value
+        password:password.value,
+        status:true
     }
     if(!emptyCheck(data.full_name) || !emptyCheck(data.email) || !emptyCheck(data.password)){
         error.value=true;
@@ -41,28 +42,10 @@ const handleSignup=()=>{
 
     axiosPost(URL.signup,data,
     (resopnse)=>{
-        debugger
     },
     (err)=>{
-        debugger;
     })
-  //   axios.get('http://localhost:8002/artists')
-  // .then(function (response) {
-  //   debugger;
-  //   // handle success
-  //   console.log(response);
-  // })
-  // .catch(function (err) {
-  //   debugger;
-
-  //   // handle err
-  //   console.log(err);
-  // })
-  // .finally(function () {
-  //   // always executed
-  //   debugger;
-
-  // });
+  
 
 
 
