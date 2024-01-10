@@ -6,6 +6,7 @@ import { ref, onMounted } from 'vue'
 import { axiosGet, axiosPost } from '@/utils/AxiosApi';
 import { URL } from '@/utils/Constant';
 import FullWidthSpinner from '@/components/FullWidthSpinner.vue';
+import { emptyCheck } from '@/utils/validation';
 const deleteModal = ref(false)
 const updateModal = ref(false)
 const createModal = ref(false)
@@ -20,17 +21,19 @@ const selectedArtistId = ref("")
 const genderList = ref(['M', 'F', 'O'])
 const dataLoader = ref(true)
 const submitSpinner = ref(false)
+const error = ref(false)
+const errorMessages = ref([])
 
 onMounted(() => {
         getAllArtist()
 })
 
 const getAllArtist = () => {
-        dataLoader.value=true
+        dataLoader.value = true
         axiosGet(URL.getAllArtist, (res) => {
                 if (res.data.success) {
                         artistList.value = res.data.data
-                        dataLoader.value=false
+                        dataLoader.value = false
                 }
         }, (err) => {
 
@@ -40,16 +43,16 @@ const getAllArtist = () => {
 
 
 const handleDelete = () => {
-        submitSpinner.value=true
+        submitSpinner.value = true
         axiosGet(`${URL.deleteArtist}/${selectedArtistId.value}/delete`, (res) => {
                 if (res.data.success) {
                         getAllArtist()
                         selectedArtistId.value = ""
                         toggleDeleteModal()
                 }
-                submitSpinner.value= false
+                submitSpinner.value = false
         }, (err) => {
-                submitSpinner.value=false
+                submitSpinner.value = false
         })
 }
 
@@ -60,9 +63,11 @@ const toggleDeleteModal = (artist) => {
 
 const toggleCreateModal = () => {
         createModal.value = !createModal.value
+        error.value=false
 }
 
 const toggleUpdateModal = (artist) => {
+        error.value=false
         updateModal.value = !updateModal.value
         if (!updateModal.value) {
                 clearArtistState()
@@ -86,7 +91,6 @@ const artistData = () => {
                 address: address.value,
                 first_release_year: firstReleaseyear.value,
                 no_of_albums_released: noOfAlbumsReleased.value,
-                artist_id: selectedArtistId.value
         }
 }
 const handleUpdate = () => {
@@ -95,7 +99,18 @@ const handleUpdate = () => {
 
 
         // handle validations
-        submitSpinner.value= true
+        error.value=false
+        errorMessages.value=[]
+        for (var key in data) {
+                if (data.hasOwnProperty(key) ) {
+                       if(!emptyCheck(data[key])){
+                                error.value=true
+                                errorMessages.push(`${key} required`)
+                       }
+                }
+        }
+        if (error.value) return;
+        submitSpinner.value = true
         axiosPost(URL.updateArtist, data, (res) => {
                 if (res.data.success) {
                         getAllArtist()
@@ -103,9 +118,9 @@ const handleUpdate = () => {
                         selectedArtistId.value = ""
                         toggleUpdateModal()
                 }
-                submitSpinner.value= false
+                submitSpinner.value = false
         }, (err) => {
-                submitSpinner.value= false
+                submitSpinner.value = false
         })
 
 
@@ -113,18 +128,28 @@ const handleUpdate = () => {
 
 const handleCreate = () => {
         let data = artistData()
-        // do validations
-        submitSpinner.value= true
+        error.value=false
+        errorMessages.value=[]
+        for (var key in data) {
+                if (data.hasOwnProperty(key) ) {
+                       if(!emptyCheck(data[key])){
+                                error.value=true
+                                errorMessages.value.push(`${key} required`)
+                       }
+                }
+        }
+       if (error.value) return;
+
+        submitSpinner.value = true
         axiosPost(URL.createArtist, data, (res) => {
-                debugger;
                 if (res.data.success) {
                         clearArtistState()
                         getAllArtist()
                         toggleCreateModal()
-                        submitSpinner.value= false
+                        submitSpinner.value = false
                 }
         }, (err) => {
-                submitSpinner.value= false
+                submitSpinner.value = false
         })
 }
 
@@ -166,11 +191,11 @@ const clearArtistState = () => {
                                 </thead>
                                 <tbody>
                                         <tr v-if="dataLoader">
-                                               <td colspan="8" class="text-center">
-                                                Loading...
-                                               </td>
+                                                <td colspan="8" class="text-center">
+                                                        Loading...
+                                                </td>
                                         </tr>
-                                        <tr v-else v-for="(artist, index) in artistList">
+                                        <tr v-else-if="artistList.length > 0" v-for="(artist, index) in artistList">
                                                 <td>{{ index + 1 }}</td>
                                                 <td>{{ artist.name }}</td>
                                                 <td>{{ artist.dob }}</td>
@@ -185,6 +210,9 @@ const clearArtistState = () => {
                                                                 @click="toggleDeleteModal(artist)">Delete</button>
                                                 </td>
 
+                                        </tr>
+                                        <tr v-else>
+                                                <td colspan="8" class="text-center">No Data...</td>
                                         </tr>
                                 </tbody>
                         </table>
@@ -205,22 +233,22 @@ const clearArtistState = () => {
                                 <form>
                                         <div class="mb-3">
                                                 <label for="exampleInputEmail1" class="form-label">Name</label>
-                                                <input v-model.trim="name" type="text" class="form-control"
+                                                <input :class="(error && name=='')?'is-invalid':''" v-model.trim="name" type="text" class="form-control"
                                                         id="exampleInputEmail1" aria-describedby="emailHelp">
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputEmail1dsf" class="form-label">Date Of Birth</label>
-                                                <input v-model.trim="dob" type="date" class="form-control"
+                                                <input :class="(error && dob=='')?'is-invalid':''" v-model.trim="dob" type="date" class="form-control"
                                                         id="exampleInputEmail1dsf" aria-describedby="emailHelp">
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1" class="form-label">Address</label>
-                                                <input v-model.trim="address" type="text" class="form-control"
+                                                <input :class="(error && address=='')?'is-invalid':''" v-model.trim="address" type="text" class="form-control"
                                                         id="exampleInputPassword1">
                                         </div>
                                         <div class="mb-3">
                                                 <label class="form-label">Gender</label>
-                                                <select class="form-control" v-model="gender">
+                                                <select :class="(error && gender=='')?'is-invalid':''" class="form-control" v-model="gender">
                                                         <option v-for="gen in genderList" :value="gen">{{ gen }}</option>
 
 
@@ -229,13 +257,13 @@ const clearArtistState = () => {
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1ttrt" class="form-label">First Release
                                                         Year</label>
-                                                <input v-model.trim="firstReleaseyear" type="date" class="form-control"
+                                                <input :class="(error && firstReleaseyear=='')?'is-invalid':''" v-model.trim="firstReleaseyear" type="date" class="form-control"
                                                         id="exampleInputPassword1ttrt">
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1ttrtsf" class="form-label">No of Albums
                                                         Released</label>
-                                                <input v-model.trim="noOfAlbumsReleased" type="number" class="form-control"
+                                                <input :class="(error && noOfAlbumsReleased=='')?'is-invalid':''" v-model.trim="noOfAlbumsReleased" type="number" class="form-control"
                                                         id="exampleInputPassword1ttrtsf">
                                         </div>
 
@@ -254,22 +282,22 @@ const clearArtistState = () => {
                                 <form>
                                         <div class="mb-3">
                                                 <label for="exampleInputEmail1" class="form-label">Name</label>
-                                                <input v-model.trim="name" type="text" class="form-control"
+                                                <input :class="(error && name=='')?'is-invalid':''" v-model.trim="name" type="text" class="form-control"
                                                         id="exampleInputEmail1" aria-describedby="emailHelp">
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputEmail1dsf" class="form-label">Date Of Birth</label>
-                                                <input v-model.trim="dob" type="date" class="form-control"
+                                                <input :class="(error && dob=='')?'is-invalid':''" v-model.trim="dob" type="date" class="form-control"
                                                         id="exampleInputEmail1dsf" aria-describedby="emailHelp">
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1" class="form-label">Address</label>
-                                                <input v-model.trim="address" type="text" class="form-control"
+                                                <input :class="(error && address=='')?'is-invalid':''" v-model.trim="address" type="text" class="form-control"
                                                         id="exampleInputPassword1">
                                         </div>
                                         <div class="mb-3">
                                                 <label class="form-label">Gender</label>
-                                                <select class="form-control" v-model="gender">
+                                                <select :class="(error && gender=='')?'is-invalid':''" class="form-control" v-model="gender">
                                                         <option value="" selected disabled>Choose...</option>
                                                         <option v-for="gen in genderList" :value="gen">{{ gen }}</option>
 
@@ -279,13 +307,13 @@ const clearArtistState = () => {
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1ttrt" class="form-label">First Release
                                                         Year</label>
-                                                <input v-model.trim="firstReleaseyear" type="date" class="form-control"
+                                                <input :class="(error && firstReleaseyear=='')?'is-invalid':''" v-model.trim="firstReleaseyear" type="date" class="form-control"
                                                         id="exampleInputPassword1ttrt">
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1ttrtsf" class="form-label">No of Albums
                                                         Released</label>
-                                                <input v-model.trim="noOfAlbumsReleased" type="number" class="form-control"
+                                                <input :class="(error && noOfAlbumsReleased=='')?'is-invalid':''" v-model.trim="noOfAlbumsReleased" type="number" class="form-control"
                                                         id="exampleInputPassword1ttrtsf">
                                         </div>
 
