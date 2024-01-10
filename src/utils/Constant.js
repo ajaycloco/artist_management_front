@@ -18,6 +18,10 @@ export const headers = {
 
     // artists
     getAllArtist : `${serverLocation}/artists`,
+    createArtist : `${serverLocation}/artists/create`,
+    updateArtist : `${serverLocation}/artists/update`,
+    deleteArtist: `${serverLocation}/artists`,
+
 
 
     // musics

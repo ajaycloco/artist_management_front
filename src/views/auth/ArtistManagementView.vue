@@ -2,9 +2,10 @@
 import DeleteModal from '@/components/DeleteModal.vue'
 import UpdateModal from '@/components/UpdateModal.vue'
 import CreateModal from '@/components/CreateModal.vue'
-import {ref, onMounted} from 'vue'
-import { axiosGet } from '@/utils/AxiosApi';
+import { ref, onMounted } from 'vue'
+import { axiosGet, axiosPost } from '@/utils/AxiosApi';
 import { URL } from '@/utils/Constant';
+import FullWidthSpinner from '@/components/FullWidthSpinner.vue';
 const deleteModal = ref(false)
 const updateModal = ref(false)
 const createModal = ref(false)
@@ -16,17 +17,22 @@ const firstReleaseyear = ref("")
 const noOfAlbumsReleased = ref(0)
 const artistList = ref([])
 const selectedArtistId = ref("")
+const genderList = ref(['M', 'F', 'O'])
+const dataLoader = ref(true)
+const submitSpinner = ref(false)
 
 onMounted(() => {
         getAllArtist()
 })
 
-const getAllArtist=()=>{
-        axiosGet(URL.getAllArtist,(res)=>{
-                if(res.data.success){
-                        artistList.value=res.data.data
+const getAllArtist = () => {
+        dataLoader.value=true
+        axiosGet(URL.getAllArtist, (res) => {
+                if (res.data.success) {
+                        artistList.value = res.data.data
+                        dataLoader.value=false
                 }
-        },(err)=>{
+        }, (err) => {
 
         })
 
@@ -34,71 +40,108 @@ const getAllArtist=()=>{
 
 
 const handleDelete = () => {
-        debugger;
+        submitSpinner.value=true
+        axiosGet(`${URL.deleteArtist}/${selectedArtistId.value}/delete`, (res) => {
+                if (res.data.success) {
+                        getAllArtist()
+                        selectedArtistId.value = ""
+                        toggleDeleteModal()
+                }
+                submitSpinner.value= false
+        }, (err) => {
+                submitSpinner.value=false
+        })
 }
 
-const toggleDeleteModal = () => {
+const toggleDeleteModal = (artist) => {
         deleteModal.value = !deleteModal.value
+        if (deleteModal) selectedArtistId.value = artist.id;
 }
+
 const toggleCreateModal = () => {
         createModal.value = !createModal.value
 }
 
 const toggleUpdateModal = (artist) => {
         updateModal.value = !updateModal.value
-        if(!updateModal.value){
-                name.value=""
-                dob.value=""
-                gender.value=""
-                address.value=""
-                firstReleaseyear.value=""
-                noOfAlbumsReleased.value=""
-                selectedArtistId.value=""
-
-
-        }else{
-                name.value=artist.name
-                dob.value=artist.dob
-                gender.value=artist.gender
-                address.value=artist.address
-                firstReleaseyear.value=artist.first_release_year
-                noOfAlbumsReleased.value=artist.no_of_albums_released
-                selectedArtistId.value=artist.id
+        if (!updateModal.value) {
+                clearArtistState()
+        } else {
+                name.value = artist.name
+                dob.value = artist.dob
+                gender.value = artist.gender
+                address.value = artist.address
+                firstReleaseyear.value = artist.first_release_year
+                noOfAlbumsReleased.value = artist.no_of_albums_released
+                selectedArtistId.value = artist.id
 
         }
 }
 
-
-const handleUpdate = () => {
-       let data ={
-               name:name.value,
-               dob:dob.value,
-               gender:gender.value,
-               address:address.value,
-               first_release_year:firstReleaseyear.value,
-               no_of_albums_released:noOfAlbumsReleased.value,
-               artist_id:selectedArtistId.value
+const artistData = () => {
+        return {
+                name: name.value,
+                dob: dob.value,
+                gender: gender.value,
+                address: address.value,
+                first_release_year: firstReleaseyear.value,
+                no_of_albums_released: noOfAlbumsReleased.value,
+                artist_id: selectedArtistId.value
         }
+}
+const handleUpdate = () => {
+        let data = artistData()
+        data.artist_id = selectedArtistId.value
+
 
         // handle validations
+        submitSpinner.value= true
+        axiosPost(URL.updateArtist, data, (res) => {
+                if (res.data.success) {
+                        getAllArtist()
+                        clearArtistState()
+                        selectedArtistId.value = ""
+                        toggleUpdateModal()
+                }
+                submitSpinner.value= false
+        }, (err) => {
+                submitSpinner.value= false
+        })
 
-        
+
 }
 
 const handleCreate = () => {
-        let data ={
-                name:name.value,
-               dob:dob.value,
-               gender:gender.value,
-               address:address.value,
-               first_release_year:firstReleaseyear.value,
-               no_of_albums_released:noOfAlbumsReleased.value,
-        }
+        let data = artistData()
+        // do validations
+        submitSpinner.value= true
+        axiosPost(URL.createArtist, data, (res) => {
+                debugger;
+                if (res.data.success) {
+                        clearArtistState()
+                        getAllArtist()
+                        toggleCreateModal()
+                        submitSpinner.value= false
+                }
+        }, (err) => {
+                submitSpinner.value= false
+        })
+}
+
+const clearArtistState = () => {
+        name.value = ""
+        dob.value = ""
+        gender.value = ""
+        address.value = ""
+        firstReleaseyear.value = ""
+        noOfAlbumsReleased.value = ""
+        selectedArtistId.value = ""
 }
 </script>
 
 
 <template>
+        <FullWidthSpinner v-if="submitSpinner" />
         <div class="row">
                 <div class="col-lg-12 d-flex justify-content-between">
                         <h1>Artist List</h1>
@@ -122,7 +165,12 @@ const handleCreate = () => {
                                         </tr>
                                 </thead>
                                 <tbody>
-                                        <tr v-for="(artist, index) in artistList">
+                                        <tr v-if="dataLoader">
+                                               <td colspan="8" class="text-center">
+                                                Loading...
+                                               </td>
+                                        </tr>
+                                        <tr v-else v-for="(artist, index) in artistList">
                                                 <td>{{ index + 1 }}</td>
                                                 <td>{{ artist.name }}</td>
                                                 <td>{{ artist.dob }}</td>
@@ -131,8 +179,10 @@ const handleCreate = () => {
                                                 <td>{{ artist.first_release_year }}</td>
                                                 <td>{{ artist.no_of_albums_released }}</td>
                                                 <td class="d-flex">
-                                                        <button class="btn btn-primary" @click="toggleUpdateModal(artist)">Edit</button>
-                                                        <button class="btn btn-danger" @click="toggleDeleteModal">Delete</button>
+                                                        <button class="btn btn-primary"
+                                                                @click="toggleUpdateModal(artist)">Edit</button>
+                                                        <button class="btn btn-danger"
+                                                                @click="toggleDeleteModal(artist)">Delete</button>
                                                 </td>
 
                                         </tr>
@@ -141,8 +191,8 @@ const handleCreate = () => {
                 </div>
         </div>
 
-         <!-- delete modal -->
-         <DeleteModal v-if="deleteModal" :toggle="deleteModal" @toggle-delete-modal="toggleDeleteModal"
+        <!-- delete modal -->
+        <DeleteModal v-if="deleteModal" :toggle="deleteModal" @toggle-delete-modal="toggleDeleteModal"
                 @handle-delete="handleDelete">
         </DeleteModal>
 
@@ -171,23 +221,24 @@ const handleCreate = () => {
                                         <div class="mb-3">
                                                 <label class="form-label">Gender</label>
                                                 <select class="form-control" v-model="gender">
-                                                        <option value="M">M</option>
-                                                        <option value="F">F</option>
-                                                        <option value="O">O</option>
+                                                        <option v-for="gen in genderList" :value="gen">{{ gen }}</option>
+
 
                                                 </select>
                                         </div>
                                         <div class="mb-3">
-                                                <label for="exampleInputPassword1ttrt" class="form-label">First Release Year</label>
+                                                <label for="exampleInputPassword1ttrt" class="form-label">First Release
+                                                        Year</label>
                                                 <input v-model.trim="firstReleaseyear" type="date" class="form-control"
                                                         id="exampleInputPassword1ttrt">
                                         </div>
                                         <div class="mb-3">
-                                                <label for="exampleInputPassword1ttrtsf" class="form-label">No of Albums Released</label>
+                                                <label for="exampleInputPassword1ttrtsf" class="form-label">No of Albums
+                                                        Released</label>
                                                 <input v-model.trim="noOfAlbumsReleased" type="number" class="form-control"
                                                         id="exampleInputPassword1ttrtsf">
                                         </div>
-                                        
+
 
                                 </form>
                         </div>
@@ -219,23 +270,25 @@ const handleCreate = () => {
                                         <div class="mb-3">
                                                 <label class="form-label">Gender</label>
                                                 <select class="form-control" v-model="gender">
-                                                        <option value="M">M</option>
-                                                        <option value="F">F</option>
-                                                        <option value="O">O</option>
+                                                        <option value="" selected disabled>Choose...</option>
+                                                        <option v-for="gen in genderList" :value="gen">{{ gen }}</option>
+
 
                                                 </select>
                                         </div>
                                         <div class="mb-3">
-                                                <label for="exampleInputPassword1ttrt" class="form-label">First Release Year</label>
+                                                <label for="exampleInputPassword1ttrt" class="form-label">First Release
+                                                        Year</label>
                                                 <input v-model.trim="firstReleaseyear" type="date" class="form-control"
                                                         id="exampleInputPassword1ttrt">
                                         </div>
                                         <div class="mb-3">
-                                                <label for="exampleInputPassword1ttrtsf" class="form-label">No of Albums Released</label>
+                                                <label for="exampleInputPassword1ttrtsf" class="form-label">No of Albums
+                                                        Released</label>
                                                 <input v-model.trim="noOfAlbumsReleased" type="number" class="form-control"
                                                         id="exampleInputPassword1ttrtsf">
                                         </div>
-                                        
+
 
                                 </form>
                         </div>
