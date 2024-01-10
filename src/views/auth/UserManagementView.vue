@@ -2,10 +2,11 @@
 import DeleteModal from '@/components/DeleteModal.vue'
 import UpdateModal from '@/components/UpdateModal.vue'
 import CreateModal from '@/components/CreateModal.vue'
-
-import { ref, onMounted} from 'vue'
+import FullWidthSpinner from '@/components/FullWidthSpinner.vue'
+import { ref, onMounted } from 'vue'
 import { axiosGet, axiosPost } from '@/utils/AxiosApi';
 import { URL } from '@/utils/Constant';
+import { emptyCheck } from '@/utils/validation';
 
 const deleteModal = ref(false)
 const updateModal = ref(false)
@@ -17,6 +18,9 @@ const password = ref("")
 const submitSpinner = ref(false)
 const userList = ref([])
 const selectedUserId = ref("")
+const dataLoader = ref(true)
+const error = ref(false)
+const errorMessages = ref([])
 
 
 onMounted(() => {
@@ -24,20 +28,33 @@ onMounted(() => {
 })
 
 
-const getAllUsers =()=>{
-        axiosGet(URL.getAllUsers,(response)=>{
-               if(response.data.success){
-                userList.value = response.data.data
-               }
+const getAllUsers = () => {
+        dataLoader.value = true
+        axiosGet(URL.getAllUsers, (response) => {
+                if (response.data.success) {
+                        userList.value = response.data.data
+                        dataLoader.value = false
+                }
         },
-        (err)=>{
+        (err) => {
 
         })
 }
 
 
+
 const handleDelete = () => {
-        debugger;
+        submitSpinner.value = true
+        axiosGet(`${URL.deleteUser}/${selectedUserId.value}/delete`, (res) => {
+                if (res.data.success) {
+                        getAllUsers()
+                        selectedUserId.value = ""
+                        toggleDeleteModal()
+                }
+                submitSpinner.value = false
+        }, (err) => {
+                submitSpinner.value = false
+        })
 }
 
 const toggleDeleteModal = () => {
@@ -45,59 +62,101 @@ const toggleDeleteModal = () => {
 }
 const toggleCreateModal = () => {
         createModal.value = !createModal.value
+        error.value=false
 }
 
 const toggleUpdateModal = (user) => {
         updateModal.value = !updateModal.value
         if (!updateModal.value) {
-                name.value = ""
-                email.value = ""
-                status.value = 1
-                selectedUserId.value=""
-               
-        }else{
+                clearUserState()
+                selectedUserId.value = ""
+
+        } else {
                 name.value = user.full_name
                 email.value = user.email
                 status.value = user.status
-                selectedUserId.value=user.id
+                selectedUserId.value = user.id
         }
 }
 
 
 const handleUpdate = () => {
-        let data = {
-                name: name.value,
-                email: email.value,
-                status: status.value,
+        let data = userData()
+        data.user_id = selectedUserId
+        error.value = false
+        for (var key in data) {
+                if (data.hasOwnProperty(key)) {
+                        if (!emptyCheck(data[key])) {
+                                error.value = true
+                                errorMessages.value.push(`${key} required`)
+                        }
+                }
         }
+        if (error.value) return;
+
+        submitSpinner.value = true
+        axiosPost(URL.updateUser,data,(res)=>{
+                if(res.data.success){
+                        getAllUsers()
+                        clearUserState()
+                        toggleUpdateModal()
+                }
+                submitSpinner.value=false
+        },(err)=>{
+                submitSpinner.value=false
+        })
+
 }
 
 const handleCreate = () => {
-        let data = {
-                full_name: name.value,
-                email: email.value,
-                status: status.value,
-                password: password.value
+        let data = userData()
+        error.value = false;
+        data.password = password.value
+
+        for (var key in data) {
+                if (data.hasOwnProperty(key)) {
+                        if (!emptyCheck(data[key])) {
+                                error.value = true
+                                errorMessages.value.push(`${key} required`)
+                        }
+                }
         }
+
+        if (error.value) return;
         submitSpinner.value = true
         axiosPost(URL.signup, data, (res) => {
                 if (res.data.success) {
-                        debugger;
-                        email.value = ""
-                        name.value = ""
-                        password.value = ""
+                        getAllUsers()
+                        clearUserState()
+                        toggleCreateModal()
                 }
                 submitSpinner.value = false
-                toggleCreateModal()
         },
         (err) => {
                 submitSpinner.value = false
         })
 }
+
+const clearUserState = () => {
+        email.value = ""
+        name.value = ""
+        password.value = ""
+        status.value=1
+        selectedUserId.value=""
+}
+
+const userData = () => {
+        return {
+                full_name: name.value,
+                email: email.value,
+                status: status.value
+        }
+}
 </script>
 
 
 <template>
+        <FullWidthSpinner v-if="submitSpinner" />
         <div class="row">
                 <div class="col-lg-12 d-flex justify-content-between">
                         <h1>Users List</h1>
@@ -118,17 +177,24 @@ const handleCreate = () => {
                                         </tr>
                                 </thead>
                                 <tbody>
-                                        <tr v-for="(user, index) in userList">
+                                        <tr v-if="dataLoader">
+                                                <td colspan="5" class="text-center">Loading...</td>
+                                        </tr>
+                                        <tr v-else-if="userList.length > 0" v-for="(user, index) in userList">
                                                 <td>{{ index + 1 }}</td>
                                                 <td>{{ user.full_name }}</td>
-                                                <td>{{user.email}}</td>
-                                                <td>{{ user.status?'Enabled':'Disabled' }}</td>
+                                                <td>{{ user.email }}</td>
+                                                <td>{{ user.status ? 'Enabled' : 'Disabled' }}</td>
                                                 <td class="d-flex">
-                                                        <button class="btn btn-primary" @click="toggleUpdateModal(user)">Edit</button>
+                                                        <button class="btn btn-primary"
+                                                                @click="toggleUpdateModal(user)">Edit</button>
                                                         <button class="btn btn-danger"
                                                                 @click="toggleDeleteModal">Delete</button>
                                                 </td>
 
+                                        </tr>
+                                        <tr v-else>
+                                                <td colspan="5" class="text-center">No Data...</td>
                                         </tr>
                                 </tbody>
                         </table>
@@ -150,27 +216,27 @@ const handleCreate = () => {
                                 <form>
                                         <div class="mb-3">
                                                 <label for="exampleInputEmail1" class="form-label">Name</label>
-                                                <input v-model.trim="name" type="text" class="form-control"
+                                                <input :class="(error && name=='')?'is-invalid':''" v-model.trim="name" type="text" class="form-control"
                                                         id="exampleInputEmail1" aria-describedby="emailHelp">
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1" class="form-label">Email</label>
-                                                <input v-model.trim="email" type="text" class="form-control"
+                                                <input :class="(error && email=='')?'is-invalid':''" v-model.trim="email" type="text" class="form-control"
                                                         id="exampleInputPassword1">
                                         </div>
                                         <div class="mb-3">
                                                 <label class="form-label">Status</label>
-                                                <select class="form-control" v-model="status">
+                                                <select class="form-control" :class="(error && status=='')?'is-invalid':''" v-model="status">
                                                         <option :value="true">Enable</option>
                                                         <option :value="false">Disable</option>
 
                                                 </select>
                                         </div>
-                                        <div class="mb-3">
+                                        <!-- <div class="mb-3">
                                                 <label for="exampleInputPassword1d" class="form-label">Password</label>
-                                                <input v-model.trim="password" type="text" class="form-control"
+                                                <input :class="(error && password=='')?'is-invalid':''" v-model.trim="password" type="text" class="form-control"
                                                         id="exampleInputPassword1d">
-                                        </div>
+                                        </div> -->
 
 
                                 </form>
@@ -180,24 +246,25 @@ const handleCreate = () => {
 
 
         <!-- create modal -->
-        <CreateModal v-if="createModal" :spinner="submitSpinner" :toggle="createModal" title="Create User" @toggle-create-modal="toggleCreateModal"
-                @handle-create="handleCreate">
+        <CreateModal v-if="createModal" :spinner="submitSpinner" :toggle="createModal" title="Create User"
+                @toggle-create-modal="toggleCreateModal" @handle-create="handleCreate">
                 <div class="row">
                         <div class="col-lg-12 ">
                                 <form>
                                         <div class="mb-3">
                                                 <label for="exampleInputEmail1" class="form-label">Name</label>
-                                                <input v-model.trim="name" type="text" class="form-control"
+                                                <input :class="(error && name=='')?'is-invalid':''" v-model.trim="name" type="text" class="form-control"
                                                         id="exampleInputEmail1" aria-describedby="emailHelp">
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1" class="form-label">Email</label>
-                                                <input v-model.trim="email" type="text" class="form-control"
+                                                <input :class="(error && email=='')?'is-invalid':''" v-model.trim="email" type="text" class="form-control"
                                                         id="exampleInputPassword1">
                                         </div>
                                         <div class="mb-3">
                                                 <label class="form-label">Status</label>
-                                                <select class="form-control" v-model="status">
+                                                <select class="form-control" :class="(error && status=='')?'is-invalid':''" v-model="status">
+                                                        <option value="" selected disabled>Choose...</option>
                                                         <option :value="true">Enable</option>
                                                         <option :value="false">Disable</option>
 
@@ -205,7 +272,7 @@ const handleCreate = () => {
                                         </div>
                                         <div class="mb-3">
                                                 <label for="exampleInputPassword1d" class="form-label">Password</label>
-                                                <input v-model.trim="password" type="text" class="form-control"
+                                                <input :class="(error && password=='')?'is-invalid':''" v-model.trim="password" type="text" class="form-control"
                                                         id="exampleInputPassword1d">
                                         </div>
 

@@ -14,6 +14,8 @@ export const headers = {
 
     // users
     getAllUsers :`${serverLocation}/users`,
+    updateUser : `${serverLocation}/users/update`,
+    deleteUser: `${serverLocation}/users`,
 
 
     // artists
