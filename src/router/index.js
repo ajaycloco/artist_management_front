@@ -11,7 +11,7 @@ import MusicList from '../components/MusicList.vue'
 import NotFound from '../components/NotFound.vue'
 import Forbidden from '../components/ForbiddenView.vue'
 
-const loggedin = true;
+
 const router= createRouter({
     history:createWebHistory(import.meta.env.BASE_URL),
     routes:[
@@ -94,11 +94,12 @@ const router= createRouter({
     ]
 })
 
-
+const token = localStorage.getItem('token')
+const isLoggedIn = (token==null || token =="" || token ==undefined)?false:true 
 // handling auth routes 
 router.beforeEach((to,from,next)=>{
     if(to.matched.some((record)=>record.meta.requiresAuth)){
-        if(loggedin){
+        if(isLoggedIn){
             next()
         }else{
             // router.push('/login')

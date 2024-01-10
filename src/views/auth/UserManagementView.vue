@@ -3,16 +3,37 @@ import DeleteModal from '@/components/DeleteModal.vue'
 import UpdateModal from '@/components/UpdateModal.vue'
 import CreateModal from '@/components/CreateModal.vue'
 
-
-import { ref } from 'vue'
+import { ref, onMounted} from 'vue'
+import { axiosGet, axiosPost } from '@/utils/AxiosApi';
+import { URL } from '@/utils/Constant';
 
 const deleteModal = ref(false)
 const updateModal = ref(false)
 const createModal = ref(false)
 const name = ref("")
 const email = ref("")
-const status = ref(1)
+const status = ref(true)
+const password = ref("")
+const submitSpinner = ref(false)
+const userList = ref([])
+const selectedUserId = ref("")
 
+
+onMounted(() => {
+        getAllUsers()
+})
+
+
+const getAllUsers =()=>{
+        axiosGet(URL.getAllUsers,(response)=>{
+               if(response.data.success){
+                userList.value = response.data.data
+               }
+        },
+        (err)=>{
+
+        })
+}
 
 
 const handleDelete = () => {
@@ -26,30 +47,52 @@ const toggleCreateModal = () => {
         createModal.value = !createModal.value
 }
 
-const toggleUpdateModal = () => {
+const toggleUpdateModal = (user) => {
         updateModal.value = !updateModal.value
-        if(!updateModal.value){
-                name.value="";
-                email.value=""
-                status.value=1
+        if (!updateModal.value) {
+                name.value = ""
+                email.value = ""
+                status.value = 1
+                selectedUserId.value=""
+               
+        }else{
+                name.value = user.full_name
+                email.value = user.email
+                status.value = user.status
+                selectedUserId.value=user.id
         }
 }
 
 
 const handleUpdate = () => {
-       let data ={
-                name:name.value,
-                email:email.value,
-                status:status.value,
+        let data = {
+                name: name.value,
+                email: email.value,
+                status: status.value,
         }
 }
 
 const handleCreate = () => {
-        let data ={
-                name:name.value,
-                email:email.value,
-                status:status.value,
+        let data = {
+                full_name: name.value,
+                email: email.value,
+                status: status.value,
+                password: password.value
         }
+        submitSpinner.value = true
+        axiosPost(URL.signup, data, (res) => {
+                if (res.data.success) {
+                        debugger;
+                        email.value = ""
+                        name.value = ""
+                        password.value = ""
+                }
+                submitSpinner.value = false
+                toggleCreateModal()
+        },
+        (err) => {
+                submitSpinner.value = false
+        })
 }
 </script>
 
@@ -75,14 +118,15 @@ const handleCreate = () => {
                                         </tr>
                                 </thead>
                                 <tbody>
-                                        <tr>
-                                                <td>1</td>
-                                                <td>john</td>
-                                                <td>Doe</td>
-                                                <td>Enabled</td>
+                                        <tr v-for="(user, index) in userList">
+                                                <td>{{ index + 1 }}</td>
+                                                <td>{{ user.full_name }}</td>
+                                                <td>{{user.email}}</td>
+                                                <td>{{ user.status?'Enabled':'Disabled' }}</td>
                                                 <td class="d-flex">
-                                                        <button class="btn btn-primary" @click="toggleUpdateModal">Edit</button>
-                                                        <button class="btn btn-danger" @click="toggleDeleteModal">Delete</button>
+                                                        <button class="btn btn-primary" @click="toggleUpdateModal(user)">Edit</button>
+                                                        <button class="btn btn-danger"
+                                                                @click="toggleDeleteModal">Delete</button>
                                                 </td>
 
                                         </tr>
@@ -92,8 +136,8 @@ const handleCreate = () => {
         </div>
 
 
-         <!-- delete modal -->
-         <DeleteModal v-if="deleteModal" :toggle="deleteModal" @toggle-delete-modal="toggleDeleteModal"
+        <!-- delete modal -->
+        <DeleteModal v-if="deleteModal" :toggle="deleteModal" @toggle-delete-modal="toggleDeleteModal"
                 @handle-delete="handleDelete">
         </DeleteModal>
 
@@ -116,13 +160,18 @@ const handleCreate = () => {
                                         </div>
                                         <div class="mb-3">
                                                 <label class="form-label">Status</label>
-                                                <select class="form-control" v-model="genre">
-                                                        <option value="1">Enable</option>
-                                                        <option value="0">Disable</option>
+                                                <select class="form-control" v-model="status">
+                                                        <option :value="true">Enable</option>
+                                                        <option :value="false">Disable</option>
 
                                                 </select>
                                         </div>
-                                        
+                                        <div class="mb-3">
+                                                <label for="exampleInputPassword1d" class="form-label">Password</label>
+                                                <input v-model.trim="password" type="text" class="form-control"
+                                                        id="exampleInputPassword1d">
+                                        </div>
+
 
                                 </form>
                         </div>
@@ -131,7 +180,7 @@ const handleCreate = () => {
 
 
         <!-- create modal -->
-        <CreateModal v-if="createModal" :toggle="createModal" title="Create User" @toggle-create-modal="toggleCreateModal"
+        <CreateModal v-if="createModal" :spinner="submitSpinner" :toggle="createModal" title="Create User" @toggle-create-modal="toggleCreateModal"
                 @handle-create="handleCreate">
                 <div class="row">
                         <div class="col-lg-12 ">
@@ -148,11 +197,16 @@ const handleCreate = () => {
                                         </div>
                                         <div class="mb-3">
                                                 <label class="form-label">Status</label>
-                                                <select class="form-control" v-model="genre">
-                                                        <option value="1">Enable</option>
-                                                        <option value="0">Disable</option>
+                                                <select class="form-control" v-model="status">
+                                                        <option :value="true">Enable</option>
+                                                        <option :value="false">Disable</option>
 
                                                 </select>
+                                        </div>
+                                        <div class="mb-3">
+                                                <label for="exampleInputPassword1d" class="form-label">Password</label>
+                                                <input v-model.trim="password" type="text" class="form-control"
+                                                        id="exampleInputPassword1d">
                                         </div>
 
                                 </form>

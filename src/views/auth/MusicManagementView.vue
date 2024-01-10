@@ -1,10 +1,12 @@
 <script setup>
+import { ref, onMounted } from 'vue'
 import DeleteModal from '@/components/DeleteModal.vue'
 import UpdateModal from '@/components/UpdateModal.vue'
 import CreateModal from '@/components/CreateModal.vue'
+import { axiosGet, axiosPost } from '@/utils/AxiosApi'
 
 
-import { ref } from 'vue'
+import { URL } from '@/utils/Constant';
 
 const deleteModal = ref(false)
 const updateModal = ref(false)
@@ -13,7 +15,35 @@ const albumName = ref("")
 const title = ref("")
 const genre = ref("")
 const artist = ref("")
+const musicList = ref([])
+const genreList = ref(['rnb','country','classic','rock','jazz'])
+const artistList = ref([])
+const selectedMusicId = ref({})
 
+onMounted(() => {
+    getAllmusic()  
+})
+
+const getArtists=()=>{
+        axiosGet(URL.getAllArtist,(res)=>{
+                if(res.data.success){
+                        artistList.value=res.data.data
+                }
+        },(err)=>{
+
+        })
+}
+
+
+const getAllmusic=()=>{
+    axiosGet(URL.getAllMusic,(res)=>{
+        if(res.data.success){
+            musicList.value=res.data.data
+        }
+    },(err)=>{
+
+    })
+}
 
 const handleDelete = () => {
         debugger;
@@ -24,15 +54,24 @@ const toggleDeleteModal = () => {
 }
 const toggleCreateModal = () => {
         createModal.value = !createModal.value
+        if(createModal.value){
+                getArtists()
+        }
 }
 
-const toggleUpdateModal = () => {
+const toggleUpdateModal = (music) => {
         updateModal.value = !updateModal.value
         if(!updateModal.value){
                 title.value="";
                 albumName.value=""
                 genre.value=""
                 artist.value=""
+        }else{
+                getArtists()
+                title.value=music.title;
+                albumName.value=music.album_name
+                genre.value=music.genre
+                artist.value=music.artist_id
         }
 }
 
@@ -53,6 +92,20 @@ const handleCreate = () => {
                 genre:genre.value,
                 artist_id:artist.value
         }
+        
+        axiosPost(URL.createMusic,data,(res)=>{
+                if(res.data.success){
+                        debugger
+                       title.value=""
+                       albumName.value=""
+                       genre.value=""
+                       artist.value="" 
+                       getAllmusic()
+                       toggleCreateModal()
+                }
+        },(err)=>{
+
+        })
 }
 
 
@@ -73,7 +126,7 @@ const handleCreate = () => {
                 <div class="col-lg-12 table-responsive">
                         <table class="table table-responsive">
                                 <thead>
-                                        <tr>
+                                        <tr >
                                                 <th>S.N</th>
                                                 <th>Title</th>
                                                 <th>Album</th>
@@ -84,14 +137,14 @@ const handleCreate = () => {
                                         </tr>
                                 </thead>
                                 <tbody>
-                                        <tr>
-                                                <td>1</td>
-                                                <td>john</td>
-                                                <td>Doe</td>
-                                                <td>Country</td>
-                                                <td>shghs</td>
+                                        <tr v-for="(music, index) in musicList">
+                                                <td>{{ index + 1 }}</td>
+                                                <td>{{ music.title }}</td>
+                                                <td>{{ music.album_name }}</td>
+                                                <td>{{ music.genre }}</td>
+                                                <td>{{music.artist_id}}</td>
                                                 <td class="d-flex">
-                                                        <button class="btn btn-primary" @click="toggleUpdateModal">Edit</button>
+                                                        <button class="btn btn-primary" @click="toggleUpdateModal(music)">Edit</button>
                                                         <button class="btn btn-danger"
                                                                 @click="toggleDeleteModal">Delete</button>
                                                 </td>
@@ -127,16 +180,15 @@ const handleCreate = () => {
                                         <div class="mb-3">
                                                 <label class="form-label">Genre</label>
                                                 <select class="form-control" v-model="genre">
-                                                        <option value="Country">Country</option>
-                                                        <option value="Classic">Classic</option>
+                                                        <option v-for="gen in genreList" :value="gen">{{ gen }}</option>
+                                                       
 
                                                 </select>
                                         </div>
                                         <div class="mb-3">
                                                 <label class="form-label">Artist</label>
                                                 <select class="form-control" v-model="artist">
-                                                        <option value="Artist 1">Artist 1</option>
-                                                        <option value="Artist 2">Artist 2</option>
+                                                        <option v-for="art in artistList" :value="art.id">{{ art.name }}</option>
                                                 </select>
                                         </div>
 
@@ -165,16 +217,15 @@ const handleCreate = () => {
                                         <div class="mb-3">
                                                 <label class="form-label">Genre</label>
                                                 <select class="form-control" v-model="genre">
-                                                        <option value="Country">Country</option>
-                                                        <option value="Classic">Classic</option>
-
+                                                        <option value="" selected disabled>Choose...</option>
+                                                        <option v-for="gen in genreList" :value="gen">{{ gen }}</option>
                                                 </select>
                                         </div>
                                         <div class="mb-3">
                                                 <label class="form-label">Artist</label>
                                                 <select class="form-control" v-model="artist">
-                                                        <option value="Artist 1">Artist 1</option>
-                                                        <option value="Artist 2">Artist 2</option>
+                                                        <option value="" selected disabled>Choose...</option>
+                                                        <option v-for="art in artistList" :value="art.id">{{ art.name }}</option>
                                                 </select>
                                         </div>
 

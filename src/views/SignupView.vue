@@ -43,9 +43,15 @@ const handleSignup=()=>{
 
     axiosPost(URL.signup,data,
     (resopnse)=>{
-       submitSpinner.value=false
+      if(resopnse.data.success){
+        fullName.value=""
+        email.value=""
+        password.value=""
+      }
+      submitSpinner.value=false
     },
     (err)=>{
+      submitSpinner.value=false
     })
   
 

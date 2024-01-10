@@ -1,16 +1,20 @@
 <script setup>
 import {ref} from 'vue'
 import { emptyCheck} from '@/utils/validation';
+import { axiosPost } from '@/utils/AxiosApi';
+import { URL } from '@/utils/Constant';
+import { useRouter } from 'vue-router';
 
+const router = useRouter()
 const email = ref("")
 const password = ref("")
 const submitSpinner = ref(false)
 const error = ref(false)
 
 
+
 const handleLogin=()=>{
     event.preventDefault()
-    submitSpinner.value=true
     error.value=false
     let data = {
         email:email.value,
@@ -21,7 +25,20 @@ const handleLogin=()=>{
     }
 
     if (error.value) return;
-    // api call
+    submitSpinner.value=true
+    axiosPost(URL.loginUrl,data,(response)=>{
+        if(response.data.success){
+            let token= response.data.jwt_access_token.bearer_token
+            let expiration_date= response.data.jwt_access_token.expiration_date
+            localStorage.setItem('token',token)
+            localStorage.setItem('expiration_date',expiration_date)
+            router.push('/dashboard')
+        }
+        submitSpinner.value=false
+    },(err)=>{
+        submitSpinner.value=false
+
+    })
     
 }
 </script>

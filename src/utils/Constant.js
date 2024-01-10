@@ -1,6 +1,6 @@
 export const headers = {
-    // Authorization: `Bearer ${localStorage.getItem("token")} `,
-    Authorization: "",
+    Authorization: `Bearer ${localStorage.getItem("token")} `,
+    // Authorization: "",
     "Content-Type": "application/json",
     Accept: "application/json",
     // "Client-Ip": localStorage.getItem("my_ip"),
@@ -10,5 +10,17 @@ export const headers = {
 
   export const URL={
     loginUrl: `${serverLocation}/login`,
-    signup:`${serverLocation}/users/create`
+    signup:`${serverLocation}/users/create`,
+
+    // users
+    getAllUsers :`${serverLocation}/users`,
+
+
+    // artists
+    getAllArtist : `${serverLocation}/artists`,
+
+
+    // musics
+    getAllMusic : `${serverLocation}/musics`,
+    createMusic: `${serverLocation}/music/create`
   }

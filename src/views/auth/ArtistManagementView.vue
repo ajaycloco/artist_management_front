@@ -2,7 +2,9 @@
 import DeleteModal from '@/components/DeleteModal.vue'
 import UpdateModal from '@/components/UpdateModal.vue'
 import CreateModal from '@/components/CreateModal.vue'
-import {ref} from 'vue'
+import {ref, onMounted} from 'vue'
+import { axiosGet } from '@/utils/AxiosApi';
+import { URL } from '@/utils/Constant';
 const deleteModal = ref(false)
 const updateModal = ref(false)
 const createModal = ref(false)
@@ -12,6 +14,24 @@ const address = ref("")
 const gender = ref("")
 const firstReleaseyear = ref("")
 const noOfAlbumsReleased = ref(0)
+const artistList = ref([])
+const selectedArtistId = ref("")
+
+onMounted(() => {
+        getAllArtist()
+})
+
+const getAllArtist=()=>{
+        axiosGet(URL.getAllArtist,(res)=>{
+                if(res.data.success){
+                        artistList.value=res.data.data
+                }
+        },(err)=>{
+
+        })
+
+}
+
 
 const handleDelete = () => {
         debugger;
@@ -24,16 +44,26 @@ const toggleCreateModal = () => {
         createModal.value = !createModal.value
 }
 
-const toggleUpdateModal = () => {
+const toggleUpdateModal = (artist) => {
         updateModal.value = !updateModal.value
         if(!updateModal.value){
-                name.value="";
+                name.value=""
                 dob.value=""
                 gender.value=""
                 address.value=""
                 firstReleaseyear.value=""
                 noOfAlbumsReleased.value=""
+                selectedArtistId.value=""
 
+
+        }else{
+                name.value=artist.name
+                dob.value=artist.dob
+                gender.value=artist.gender
+                address.value=artist.address
+                firstReleaseyear.value=artist.first_release_year
+                noOfAlbumsReleased.value=artist.no_of_albums_released
+                selectedArtistId.value=artist.id
 
         }
 }
@@ -47,7 +77,12 @@ const handleUpdate = () => {
                address:address.value,
                first_release_year:firstReleaseyear.value,
                no_of_albums_released:noOfAlbumsReleased.value,
+               artist_id:selectedArtistId.value
         }
+
+        // handle validations
+
+        
 }
 
 const handleCreate = () => {
@@ -87,16 +122,16 @@ const handleCreate = () => {
                                         </tr>
                                 </thead>
                                 <tbody>
-                                        <tr>
-                                                <td>1</td>
-                                                <td>john</td>
-                                                <td>2013</td>
-                                                <td>adsdfgdgfd</td>
-                                                <td>gender</td>
-                                                <td>2023</td>
-                                                <td>3</td>
+                                        <tr v-for="(artist, index) in artistList">
+                                                <td>{{ index + 1 }}</td>
+                                                <td>{{ artist.name }}</td>
+                                                <td>{{ artist.dob }}</td>
+                                                <td>{{ artist.address }}</td>
+                                                <td>{{ artist.gender }}</td>
+                                                <td>{{ artist.first_release_year }}</td>
+                                                <td>{{ artist.no_of_albums_released }}</td>
                                                 <td class="d-flex">
-                                                        <button class="btn btn-primary" @click="toggleUpdateModal">Edit</button>
+                                                        <button class="btn btn-primary" @click="toggleUpdateModal(artist)">Edit</button>
                                                         <button class="btn btn-danger" @click="toggleDeleteModal">Delete</button>
                                                 </td>
 

@@ -1,10 +1,14 @@
 <script setup>
 import { ref, defineProps, defineEmits } from 'vue';
-    const props=defineProps(['toggle','title'])
+import FullWidthSpinner from '@/components/FullWidthSpinner.vue'
+
+    const props=defineProps(['toggle','title','spinner'])
     const emit = defineEmits()
 </script>
 
 <template>
+         <FullWidthSpinner v-if="props.spinner" />
+
     <div>
       <v-row
         justify="center"
